@@ -11,6 +11,10 @@ from fake_useragent import UserAgent
 import re
 import dice
 import confpo
+import datetime
+import traceback
+import sys
+import os
 
 
 # полезные ссылки https://vk-api.readthedocs.io/en/latest/_modules/vk_api/bot_longpoll.html
