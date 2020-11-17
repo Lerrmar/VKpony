@@ -145,7 +145,17 @@ def main():
 
 
         except:
-            pass
+            if 'log.txt' in os.listdir():
+                full = open('logfull.txt', 'w+')
+                old = open ('log.txt', 'r')
+                full.write(old.read())
+                full.close()
+                old.close()
+            file = open('log.txt','w')
+            file.write(str(datetime.datetime.now())+"\n")
+            traceback.print_tb(sys.exc_info()[2], file=file)
+            file.write(str(sys.exc_info()[1]))
+            file.close()
 
 
 if __name__ == '__main__':
