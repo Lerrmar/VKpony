@@ -81,27 +81,41 @@ def main():
                             break
 
                         UserAgent().chrome  # маскировка под браузер, что бы бот на сайте не выглядел как бот
-
-                        number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
-                        numsist = str(number)
-                        print(number)
-                        # Начало парсинга
-                        main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
-                        main_page = str(main_pagest)
-                        print(main_page)
-                        response = requests.get(main_page)
-                        html = response.content
-                        soup = BeautifulSoup(response.text, "html.parser")
-                        scans = soup.find_all("div", {"class": "image"})
-                        # print(issues)
-                        # print("issues " * 5)
+                        #Объявление массива для ссылок на картинки нужно до цикла
                         obj23 = []  # про добавление в список https://coderoad.ru/15050756/%D0%9D%D0%B5%D0%B2%D0%BE%D0%B7%D0%BC%D0%BE%D0%B6%D0%BD%D0%BE-%D0%BD%D0%B0%D0%BF%D0%B5%D1%87%D0%B0%D1%82%D0%B0%D1%82%D1%8C-%D0%BE%D1%82%D0%B4%D0%B5%D0%BB%D1%8C%D0%BD%D1%83%D1%8E-%D1%81%D1%82%D1%80%D0%BE%D0%BA%D1%83-%D1%81-random-choice-%D1%82%D0%BE%D0%BB%D1%8C%D0%BA%D0%BE-%D0%BE%D1%82%D0%B4%D0%B5%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5-%D1%81%D0%B8%D0%BC%D0%B2%D0%BE%D0%BB%D1%8B
-                        for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
-                            try:
-                                obj2 = scan.find("a")["href"]
-                            except:
-                                pass
-                            obj23.append(obj2)
+                        #Цикл что бы убедиться, что мы найдем хотя бы 1 картинку на странице
+                        it := 0
+                        while 1:
+                            it= it +1
+                            if it >100:
+                                raise 'Кажется я проебался и мы зашли в вечный цикл'
+                            number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
+                            numsist = str(number)
+                            print(number)
+                            # Начало парсинга
+                            main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
+                            main_page = str(main_pagest)
+                            print(main_page)
+                            response = requests.get(main_page)
+                            html = response.content
+                            soup = BeautifulSoup(response.text, "html.parser")
+                            scans = soup.find_all("div", {"class": "image"})
+                            # print(issues)
+                            # print("issues " * 5)
+                            for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
+                                '''try:
+                                    obj2 = scan.find("a")["href"]
+                                except:
+                                    pass
+                                obj23.append(obj2)'''
+                                #святым рандомом поптыка взять ссылку с первого div либо выходила успешной, либо валила ошибку. Если она валила ошибку, 
+                                #то срабатывал except pass и переменной obj2 ещё не было
+                                #результат: при попытке добавить сслыку в массив ошибка что в логе
+                                #+если не находил ссылку на 2-ом/3/5/10/... диве, то писал старую ссылку. в том числе от предыдущего запроса. т.е. чисто в теории мог выдать комикс на Вано и Вано на коммикс
+                                if "href" in scan.find("a"):
+                                    obj23.append(scan.find("a")["href"])
+                            if len(obj23)>0:
+                                break
                         itogpony = random.choice(obj23)  # рандомно выбираем ссылку, возможно вам и не нужно всё это
                         print(itogpony)
                         print("itogpony " * 5)
