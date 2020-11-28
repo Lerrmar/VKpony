@@ -3,6 +3,8 @@
 import vk_api
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 from vk_api.utils import get_random_id
+from vk_api import VkUpload
+
 import random
 import time
 from bs4 import BeautifulSoup
@@ -22,17 +24,19 @@ import os
 # полезные ссылки https://qna.habr.com/q/686454
 # про парсинг https://fulyankin.github.io/Parsers/
 def main():
+    session = requests.Session()
     while True:  # цикл если вдруг бот где то навернется на пол пути то весь код перезапустится
         try:
             vk_session = vk_api.VkApi(token=confpo.token)  # ваш токен из группы, тут всё просто
             # print(vk_session)
+            upload = VkUpload(vk_session)
 
             longpoll = VkBotLongPoll(vk_session, confpo.idsession)  # id вашей группы
             vk = vk_session.get_api()
             print(vk)
             for event in longpoll.listen():
-                # print(longpoll)
-                # print("longpoll")
+                print(longpoll)
+                print("longpoll" * 5)
 
                 if event.type == VkBotEventType.MESSAGE_NEW:  # если нам написали сообщение
                     # print('Новое сообщение')  # для отслеживания работоспособности
@@ -41,12 +45,12 @@ def main():
 
                     if event.obj.text == event.obj.text:  # если боту написали определенный текст
                         print("Новое сообщение - " + event.obj.text)
-                        print(time.asctime(time.localtime(time.time())))
+                        print(str(datetime.datetime.now()))
                         texta = ["Держи пони", "Лови", "Вот, наслаждайся", "Моё почтение(нет)"]
                         tagall = 4500
                         tag = "mlp+art/"
                         if re.search(r'\bВано\b', event.obj.text):
-                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол']
+                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол', 'Не спускайте глаз с Вано']
                             tagall = 260
                             tag = "eropony/"
                             print("Эро + " + event.obj.text)
@@ -81,70 +85,45 @@ def main():
                             break
 
                         UserAgent().chrome  # маскировка под браузер, что бы бот на сайте не выглядел как бот
-                        #Объявление массива для ссылок на картинки нужно до цикла
+                        number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
+                        numsist = str(number)
+                        print(number)
+                        # Начало парсинга
+                        main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
+                        main_page = str(main_pagest)
+                        print(main_page)
+                        response = requests.get(main_page)
+                        html = response.content
+                        soup = BeautifulSoup(response.text, "html.parser")
+                        scans = soup.find_all("div", {"class": "image"})
+                        # print(issues)
+                        # print("issues " * 5)
                         obj23 = []  # про добавление в список https://coderoad.ru/15050756/%D0%9D%D0%B5%D0%B2%D0%BE%D0%B7%D0%BC%D0%BE%D0%B6%D0%BD%D0%BE-%D0%BD%D0%B0%D0%BF%D0%B5%D1%87%D0%B0%D1%82%D0%B0%D1%82%D1%8C-%D0%BE%D1%82%D0%B4%D0%B5%D0%BB%D1%8C%D0%BD%D1%83%D1%8E-%D1%81%D1%82%D1%80%D0%BE%D0%BA%D1%83-%D1%81-random-choice-%D1%82%D0%BE%D0%BB%D1%8C%D0%BA%D0%BE-%D0%BE%D1%82%D0%B4%D0%B5%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5-%D1%81%D0%B8%D0%BC%D0%B2%D0%BE%D0%BB%D1%8B
-                        #Цикл что бы убедиться, что мы найдем хотя бы 1 картинку на странице
-                        it = 0
-                        while 1:
-                            it= it +1
-                            if it >100:
-                                raise #'Кажется я проебался и мы зашли в вечный цикл'
-                            number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
-                            numsist = str(number)
-                            print(number)
-                            # Начало парсинга
-                            main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
-                            main_page = str(main_pagest)
-                            print(main_page)
-                            response = requests.get(main_page)
-                            html = response.content
-                            soup = BeautifulSoup(response.text, "html.parser")
-                            scans = soup.find_all("div", {"class": "image"})
-                            # print(issues)
-                            # print("issues " * 5)
-                            for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
-                                try:
-                                    obj2 = scan.find("a")["href"]
-                                    obj23.append(obj2)
-                                except:
-                                    pass
-                            if len(obj23)>0:
-                                break
+                        for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
+                            try:
+                                obj2 = scan.find("a")["href"]
+                            except:
+                                pass
+                            obj23.append(obj2)
                         itogpony = random.choice(obj23)  # рандомно выбираем ссылку, возможно вам и не нужно всё это
                         print(itogpony)
                         print("itogpony " * 5)
                         print()
 
-                        url = [itogpony]  # парсится фото с сайта
-
-                        def get_file(url):  # обычная загрузка изображения на комп
-                            response = requests.get(url, stream=True)
-                            return response
-
-                        def save_data(name, file_data):
-                            file = open(name, 'bw')  # Бинарный режим, изображение передається байтами
-                            for chunk in file_data.iter_content(4096):  # Записываем в файл по блочно данные
-                                file.write(chunk)
-
-                        def get_name(url):
-                            name = 'pony.jpg'
-                            return name
-
-                        for name in url:
-                            save_data(get_name(name), get_file(name))
-                        # time.sleep(1)
-
-                        uploader = vk_api.upload.VkUpload(vk)  # обычная загрузка изображения в ВК
-                        img = uploader.photo_messages("pony.jpg")
-                        media_id = str(img[0]['id'])
-                        owner_id = str(img[0]['owner_id'])
+                        attachments = []
+                        image_url = itogpony
+                        image = session.get(image_url, stream=True)
+                        photo = upload.photo_messages(photos=image.raw)[0]
+                        attachments.append(
+                            'photo{}_{}'.format(photo['owner_id'], photo['id'])
+                        )
 
                         vk.messages.send(
                             peer_id=event.obj.peer_id,  # peer_id уникальное ид для чата, from_id ид того кто написал
                             random_id=get_random_id(),
                             message=(random.choice(texta)),
                             # message=("Держи пони - " + event.obj.text),
-                            attachment=("photo" + owner_id + "_" + media_id)
+                            attachment=','.join(attachments),
                         )
                         # print(vk.messages.send)
                         # print("vk.messages.send")
