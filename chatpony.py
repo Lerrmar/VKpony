@@ -1,36 +1,31 @@
 # -*- coding: utf-8 -*-
 # Версия API: 5:100
-import vk_api
-from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
-from vk_api.utils import get_random_id
-from vk_api import VkUpload
-
+import importlib
 import random
 import time
-from bs4 import BeautifulSoup
 import requests
-from fake_useragent import UserAgent
 import re
-import dice
 import confpo
 import datetime
 import traceback
 import sys
 import os
 
+import vk_api
+from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
+from vk_api.utils import get_random_id
+from vk_api import VkUpload
+from bs4 import BeautifulSoup
 
-# полезные ссылки https://vk-api.readthedocs.io/en/latest/_modules/vk_api/bot_longpoll.html
-# полезные ссылки https://vk.com/dev/messages.send
-# полезные ссылки https://qna.habr.com/q/686454
-# про парсинг https://fulyankin.github.io/Parsers/
+
+session = requests.Session()
+vk_session = vk_api.VkApi(token=confpo.token)  # ваш токен из группы, тут всё просто
+upload = VkUpload(vk_session)
+
+
 def main():
-    session = requests.Session()
     while True:  # цикл если вдруг бот где то навернется на пол пути то весь код перезапустится
         try:
-            vk_session = vk_api.VkApi(token=confpo.token)  # ваш токен из группы, тут всё просто
-            # print(vk_session)
-            upload = VkUpload(vk_session)
-
             longpoll = VkBotLongPoll(vk_session, confpo.idsession)  # id вашей группы
             vk = vk_session.get_api()
             print(vk)
@@ -41,16 +36,25 @@ def main():
                 if event.type == VkBotEventType.MESSAGE_NEW:  # если нам написали сообщение
                     # print('Новое сообщение')  # для отслеживания работоспособности
                     # print(event)  # данные от сервера с которыми работает бот
-                    dacepis = re.search(r'\d+d\d+', event.obj.text)
 
                     if event.obj.text == event.obj.text:  # если боту написали определенный текст
                         print("Новое сообщение - " + event.obj.text)
-                        print(str(datetime.datetime.now()))
+                        print(time.asctime(time.localtime(time.time())))
                         texta = ["Держи пони", "Лови", "Вот, наслаждайся", "Моё почтение(нет)"]
                         tagall = 4500
                         tag = "mlp+art/"
-                        if re.search(r'\bВано\b', event.obj.text):
-                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол', 'Не спускайте глаз с Вано']
+                        if re.search(r'\bhelp\b', event.obj.text):
+                            texta = ['Ваша молитва услышана, передаю значение команд:\n'
+                                     '- Без команды бот кидает просто рандомную поню из классического набора, как сейчас.\n'
+                                     '- Команда "Вано" кидает случайную пони с тэгом "eropony".\n'
+                                     '- Команда "комикс" кидает случайный комикс, тэг "mlp+комиксы".\n'
+                                     '- Команда написанная "с уважением" кидает 5 случайных пони с тэгом "eropony"\n'
+                                     'Всего вам хорошего и держитесь там']
+
+                            print("help + " + event.obj.text)
+                        elif re.search(r'\bВано\b', event.obj.text):
+                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
+                                     'Не спускайте глаз с Вано']
                             tagall = 260
                             tag = "eropony/"
                             print("Эро + " + event.obj.text)
@@ -59,32 +63,25 @@ def main():
                             tagall = 396
                             tag = "mlp+комиксы/"
                             print("Комиксы " + event.obj.text)
-                        elif re.search(r'\d+d\d+', event.obj.text):
-                            daceplus = re.search(r'\+\d+', event.obj.text)
-                            dacer = dice.roll(dacepis.group())
-                            sumdace = sum(dacer)
-                            print(dacepis.group())
-                            print(dacer)
-                            print(sumdace)
-                            # print(daceplus.group(int()))
-                            # print(bool(daceplus))
-                            if re.search(r'\+\d+', event.obj.text):
-                                sumdacemod = sumdace + int(daceplus.group())
-                                vk.messages.send(
-                                    peer_id=event.obj.peer_id,
-                                    random_id=get_random_id(),
-                                    message=("Держи кубы - " + dacepis.group() + '\n' + str(dacer) + ' Сумма ' + str(sumdace) + '\n' + 'Модификатор ' + str(daceplus.group()) + ' = ' + str(sumdacemod)),
-                                )
-                            else:
-                                vk.messages.send(
-                                    peer_id=event.obj.peer_id,
-                                    random_id=get_random_id(),
-                                    message=("Держи кубы - " + dacepis.group() + '\n' + str(dacer) + ' Сумма ' + str(sumdace)),
-                                )
+                        elif re.search(r'\bс уважением\b', event.obj.text):
+                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
+                                     'Не спускайте глаз со всех']
 
+                            with open('gotovoe.txt') as inp:
+                                ponyfile = inp.readlines()
+
+                            itogpony5 = random.sample(set(ponyfile), 5)
+                            print(itogpony5)
+                            print("Эро + " + event.obj.text)
+
+                            vk.messages.send(
+                                peer_id=event.obj.peer_id,
+                                random_id=get_random_id(),
+                                message=(random.choice(texta)),
+                                attachment=itogpony5,
+                            )
                             break
 
-                        UserAgent().chrome  # маскировка под браузер, что бы бот на сайте не выглядел как бот
                         number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
                         numsist = str(number)
                         print(number)
@@ -93,30 +90,25 @@ def main():
                         main_page = str(main_pagest)
                         print(main_page)
                         response = requests.get(main_page)
-                        html = response.content
                         soup = BeautifulSoup(response.text, "html.parser")
                         scans = soup.find_all("div", {"class": "image"})
-                        # print(issues)
-                        # print("issues " * 5)
-                        obj23 = []  # про добавление в список https://coderoad.ru/15050756/%D0%9D%D0%B5%D0%B2%D0%BE%D0%B7%D0%BC%D0%BE%D0%B6%D0%BD%D0%BE-%D0%BD%D0%B0%D0%BF%D0%B5%D1%87%D0%B0%D1%82%D0%B0%D1%82%D1%8C-%D0%BE%D1%82%D0%B4%D0%B5%D0%BB%D1%8C%D0%BD%D1%83%D1%8E-%D1%81%D1%82%D1%80%D0%BE%D0%BA%D1%83-%D1%81-random-choice-%D1%82%D0%BE%D0%BB%D1%8C%D0%BA%D0%BE-%D0%BE%D1%82%D0%B4%D0%B5%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5-%D1%81%D0%B8%D0%BC%D0%B2%D0%BE%D0%BB%D1%8B
+                        obj23 = []
                         for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
                             try:
                                 obj2 = scan.find("a")["href"]
                             except:
                                 pass
                             obj23.append(obj2)
-                        itogpony = random.choice(obj23)  # рандомно выбираем ссылку, возможно вам и не нужно всё это
-                        print(itogpony)
-                        print("itogpony " * 5)
-                        print()
 
                         attachments = []
-                        image_url = itogpony
+                        image_url = random.choice(obj23)
+                        print(image_url)
+                        print('image_url')
                         image = session.get(image_url, stream=True)
                         photo = upload.photo_messages(photos=image.raw)[0]
-                        attachments.append(
-                            'photo{}_{}'.format(photo['owner_id'], photo['id'])
-                        )
+                        attachments.append('photo{}_{}'.format(photo['owner_id'], photo['id'])
+                                           )
+                        print(attachments)
 
                         vk.messages.send(
                             peer_id=event.obj.peer_id,  # peer_id уникальное ид для чата, from_id ид того кто написал
@@ -125,8 +117,6 @@ def main():
                             # message=("Держи пони - " + event.obj.text),
                             attachment=','.join(attachments),
                         )
-                        # print(vk.messages.send)
-                        # print("vk.messages.send")
 
 
                 else:
@@ -138,12 +128,12 @@ def main():
         except:
             if 'log.txt' in os.listdir():
                 full = open('logfull.txt', 'w+')
-                old = open ('log.txt', 'r')
+                old = open('log.txt', 'r')
                 full.write(old.read())
                 full.close()
                 old.close()
-            file = open('log.txt','w')
-            file.write(str(datetime.datetime.now())+"\n")
+            file = open('log.txt', 'w')
+            file.write(str(datetime.datetime.now()) + "\n")
             traceback.print_tb(sys.exc_info()[2], file=file)
             file.write(str(sys.exc_info()[1]))
             file.close()
