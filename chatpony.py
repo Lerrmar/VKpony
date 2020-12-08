@@ -30,9 +30,6 @@ def main():
             vk = vk_session.get_api()
             print(vk)
             for event in longpoll.listen():
-                print(longpoll)
-                print("longpoll" * 5)
-
                 if event.type == VkBotEventType.MESSAGE_NEW:  # если нам написали сообщение
                     # print('Новое сообщение')  # для отслеживания работоспособности
                     # print(event)  # данные от сервера с которыми работает бот
@@ -85,44 +82,51 @@ def main():
                         number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
                         numsist = str(number)
                         print(number)
-                        # Начало парсинга
-                        main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
-                        main_page = str(main_pagest)
-                        print(main_page)
-                        response = requests.get(main_page)
-                        soup = BeautifulSoup(response.text, "html.parser")
-                        scans = soup.find_all("div", {"class": "image"})
-                        obj23 = []
-                        for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
+                        result = None
+                        while result is None:
                             try:
-                                obj2 = scan.find("a")["href"]
+                                # Начало парсинга
+                                main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
+                                main_page = str(main_pagest)
+                                print(main_page)
+                                response = requests.get(main_page)
+                                soup = BeautifulSoup(response.text, "html.parser")
+                                scans = soup.find_all("div", {"class": "image"})
+                                obj23 = []
+                                for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
+                                    try:
+                                        obj2 = scan.find("a")["href"]
+                                    except:
+                                        pass
+                                    obj23.append(obj2)
+
+                                attachments = []
+                                image_url = random.choice(obj23)
+
+                                print(image_url)
+                                print('image_url')
+                                image = session.get(image_url, stream=True)
+                                photo = upload.photo_messages(photos=image.raw)[0]
+                                attachments.append('photo{}_{}'.format(photo['owner_id'], photo['id'])
+                                                   )
+                                print(attachments)
+
+                                vk.messages.send(
+                                    peer_id=event.obj.peer_id,
+                                    # peer_id уникальное ид для чата, from_id ид того кто написал
+                                    random_id=get_random_id(),
+                                    message=(random.choice(texta)),
+                                    # message=("Держи пони - " + event.obj.text),
+                                    attachment=','.join(attachments),
+                                )
+
+                                result = 1
                             except:
                                 pass
-                            obj23.append(obj2)
-
-                        attachments = []
-                        image_url = random.choice(obj23)
-                        print(image_url)
-                        print('image_url')
-                        image = session.get(image_url, stream=True)
-                        photo = upload.photo_messages(photos=image.raw)[0]
-                        attachments.append('photo{}_{}'.format(photo['owner_id'], photo['id'])
-                                           )
-                        print(attachments)
-
-                        vk.messages.send(
-                            peer_id=event.obj.peer_id,  # peer_id уникальное ид для чата, from_id ид того кто написал
-                            random_id=get_random_id(),
-                            message=(random.choice(texta)),
-                            # message=("Держи пони - " + event.obj.text),
-                            attachment=','.join(attachments),
-                        )
-
-
                 else:
                     # print(event.type)
                     # print("event.type")
-                    print()
+                    print('Хде пысьма?')
 
 
         except:
