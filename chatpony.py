@@ -1,147 +1,263 @@
-# -*- coding: utf-8 -*-
-# Версия API: 5:100
-import importlib
+# Версия API: 5:124
+import asyncio
 import random
-import time
 import requests
-import re
-import confpo
-import datetime
-import traceback
-import sys
-import os
-
-import vk_api
-from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
-from vk_api.utils import get_random_id
-from vk_api import VkUpload
 from bs4 import BeautifulSoup
 
+from vkwave.bots import (
+    BaseEvent,
+    TokenStorage,
+    Dispatcher,
+    BotLongpollExtension,
+    DefaultRouter,
+    GroupId,
+    EventTypeFilter,
+    PayloadFilter,
+    CommandsFilter,
+    Keyboard, PhotoUploader, create_api_session_aiohttp, TextContainsFilter, BotEvent,
+)
+from vkwave.client import AIOHTTPClient
+from vkwave.api import BotSyncSingleToken, Token, API, APIOptionsRequestContext
+from vkwave.longpoll.bot import BotLongpoll, BotLongpollData
+from vkwave.types.bot_events import BotEventType
 
-session = requests.Session()
-vk_session = vk_api.VkApi(token=confpo.token)  # ваш токен из группы, тут всё просто
-upload = VkUpload(vk_session)
+import confpo
+import weather
+
+# logging.basicConfig(level=logging.DEBUG)
+bot_token = Token(confpo.token)
+gid = confpo.idsession
+router = DefaultRouter()
 
 
-def main():
-    while True:  # цикл если вдруг бот где то навернется на пол пути то весь код перезапустится
+def reactorsoup(sitepars, tag, pages, pagesmess, amt=1, ):
+    st = 1
+    result = None
+    while result is None:
         try:
-            longpoll = VkBotLongPoll(vk_session, confpo.idsession)  # id вашей группы
-            vk = vk_session.get_api()
-            print(vk)
-            for event in longpoll.listen():
-                if event.type == VkBotEventType.MESSAGE_NEW:  # если нам написали сообщение
-                    # print('Новое сообщение')  # для отслеживания работоспособности
-                    # print(event)  # данные от сервера с которыми работает бот
+            if pages is None:
+                number = pagesmess
+            else:
+                number = random.randrange(1, pages) # рандом диапазона
+            # цикл от ошибки
+            st += 1
+            if st == 5:
+                result = 1
+            main_page = sitepars + tag + str(number)  # конструктор ссылки
+            response = requests.get(str(main_page))
+            soup = BeautifulSoup(response.text, "html.parser")
+            scans = soup.find_all("div", {"class": "image"})
+            obj23 = []
+            for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
+                try:
+                    obj2 = scan.find("a")["href"]
+                except:
+                    pass
+                obj23.append(obj2)
 
-                    if event.obj.text == event.obj.text:  # если боту написали определенный текст
-                        print("Новое сообщение - " + event.obj.text)
-                        print(time.asctime(time.localtime(time.time())))
-                        texta = ["Держи пони", "Лови", "Вот, наслаждайся", "Моё почтение(нет)"]
-                        tagall = 4500
-                        tag = "mlp+art/"
-                        if re.search(r'\bhelp\b', event.obj.text):
-                            texta = ['Ваша молитва услышана, передаю значение команд:\n'
-                                     '- Без команды бот кидает просто рандомную поню из классического набора, как сейчас.\n'
-                                     '- Команда "Вано" кидает случайную пони с тэгом "eropony".\n'
-                                     '- Команда "комикс" кидает случайный комикс, тэг "mlp+комиксы".\n'
-                                     '- Команда написанная "с уважением" кидает 5 случайных пони с тэгом "eropony"\n'
-                                     'Всего вам хорошего и держитесь там']
-
-                            print("help + " + event.obj.text)
-                        elif re.search(r'\bВано\b', event.obj.text):
-                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
-                                     'Не спускайте глаз с Вано']
-                            tagall = 260
-                            tag = "eropony/"
-                            print("Эро + " + event.obj.text)
-                        elif re.search(r'\bкомикс\b', event.obj.text):
-                            texta = ['Почитай', 'Годный комикс', 'Читать понравилось?', 'Ну хоть не эротика']
-                            tagall = 396
-                            tag = "mlp+комиксы/"
-                            print("Комиксы " + event.obj.text)
-                        elif re.search(r'\bс уважением\b', event.obj.text):
-                            texta = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
-                                     'Не спускайте глаз со всех']
-
-                            with open('gotovoe.txt') as inp:
-                                ponyfile = inp.readlines()
-
-                            itogpony5 = random.sample(set(ponyfile), 5)
-                            print(itogpony5)
-                            print("Эро + " + event.obj.text)
-
-                            vk.messages.send(
-                                peer_id=event.obj.peer_id,
-                                random_id=get_random_id(),
-                                message=(random.choice(texta)),
-                                attachment=itogpony5,
-                            )
-                            break
-
-                        number = random.randrange(1, tagall)  # это если вдруг на сайте множество страниц
-                        numsist = str(number)
-                        print(number)
-                        result = None
-                        while result is None:
-                            try:
-                                # Начало парсинга
-                                main_pagest = 'http://mlp.reactor.cc/tag/' + tag + numsist  # для вашего сайта скорее всего придется изменить
-                                main_page = str(main_pagest)
-                                print(main_page)
-                                response = requests.get(main_page)
-                                soup = BeautifulSoup(response.text, "html.parser")
-                                scans = soup.find_all("div", {"class": "image"})
-                                obj23 = []
-                                for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
-                                    try:
-                                        obj2 = scan.find("a")["href"]
-                                    except:
-                                        pass
-                                    obj23.append(obj2)
-
-                                attachments = []
-                                image_url = random.choice(obj23)
-
-                                print(image_url)
-                                print('image_url')
-                                image = session.get(image_url, stream=True)
-                                photo = upload.photo_messages(photos=image.raw)[0]
-                                attachments.append('photo{}_{}'.format(photo['owner_id'], photo['id'])
-                                                   )
-                                print(attachments)
-
-                                vk.messages.send(
-                                    peer_id=event.obj.peer_id,
-                                    # peer_id уникальное ид для чата, from_id ид того кто написал
-                                    random_id=get_random_id(),
-                                    message=(random.choice(texta)),
-                                    # message=("Держи пони - " + event.obj.text),
-                                    attachment=','.join(attachments),
-                                )
-
-                                result = 1
-                            except:
-                                pass
-                else:
-                    # print(event.type)
-                    # print("event.type")
-                    print('Хде пысьма?')
-
-
+            image_url = random.sample(set(obj23), amt)
+            result = 1
         except:
-            if 'log.txt' in os.listdir():
-                full = open('logfull.txt', 'w+')
-                old = open('log.txt', 'r')
-                full.write(old.read())
-                full.close()
-                old.close()
-            file = open('log.txt', 'w')
-            file.write(str(datetime.datetime.now()) + "\n")
-            traceback.print_tb(sys.exc_info()[2], file=file)
-            file.write(str(sys.exc_info()[1]))
-            file.close()
+            print('Ошибка парсинга')
+            pass
+    return image_url
 
 
-if __name__ == '__main__':
-    main()
+@router.registrar.with_decorator(TextContainsFilter("help"), EventTypeFilter(BotEventType.MESSAGE_NEW))
+async def kb_handler(event: BaseEvent):
+    hp = "Ваша молитва услышана, передаю значение команд:\n" \
+         " - Без команды бот кидает просто рандомную поню из классического набора, как сейчас.\n" \
+         " - Команда <Вано> кидает случайную пони с тэгом <eropony>. \n" \
+         " - Команда <комикс> кидает случайный комикс, тэг <mlp+комиксы>. \n" \
+         " - Команда написанная <с уважением> кидает 5 случайных пони с тэгом <eropony> \n" \
+         " - Команда <культуры> кидает случайный арт.\n" \
+         " - Команда <погода> показывает прогноз погоды в Питере на сегодня(в разработке, пишите если нужна).\n" \
+         " - Команда <тырим> отправляет вас в мир увлекательного заимствования, напишите тырим_http://ссылку на сайт реактора/tag/_тег с конца ссылки/_номер страницы.\n" \
+         " Всего вам хорошего и держитесь там"
+    # kb = Keyboard(one_time=True)
+    # kb.add_text_button(text="Вано", payload={"hello": "world"})
+    await event.api_ctx.messages.send(
+        peer_id=event.object.object.message.peer_id,
+        message=hp,
+        # keyboard=kb.get_keyboard(),
+        random_id=0,
+    )
+
+
+@router.registrar.with_decorator(TextContainsFilter("Вано"))
+async def handler(event: BaseEvent):
+    texts = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
+             'Не спускайте глаз с Вано']
+    async with create_api_session_aiohttp(confpo.token) as api:
+        uploader = PhotoUploader(api)
+
+        big_attachment = await uploader.get_attachments_from_links(
+            peer_id=event.object.object.message.peer_id,
+            links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 260, None),
+        )
+        await api.messages.send(
+            peer_id=event.object.object.message.peer_id,
+            message=(random.choice(texts)),
+            attachment=big_attachment,
+            random_id=0
+        )
+
+
+@router.registrar.with_decorator(TextContainsFilter("культуры"))
+async def handler(event: BaseEvent):
+    texts = ['Это тебе на вечер', 'Культуры захотелось?', 'Что читаешь?', 'Ты друзь',
+             'чмоки', '&#128526;', '&#128686;', '&#127793;', '&#127770;', '&#10084;']
+    async with create_api_session_aiohttp(confpo.token) as api:
+        uploader = PhotoUploader(api)
+
+        big_attachment = await uploader.get_attachments_from_links(
+            peer_id=event.object.object.message.peer_id,
+            links=reactorsoup('http://reactor.cc/tag/', 'art/', 7580, None),
+        )
+        await api.messages.send(
+            peer_id=event.object.object.message.peer_id,
+            message=(random.choice(texts)),
+            attachment=big_attachment,
+            random_id=0
+        )
+
+
+@router.registrar.with_decorator(TextContainsFilter("комикс"))
+async def handler(event: BaseEvent):
+    texts = ['Почитай', 'Годный комикс', 'Читать понравилось?', 'Ну хоть не эротика']
+    async with create_api_session_aiohttp(confpo.token) as api:
+        uploader = PhotoUploader(api)
+        big_attachment = await uploader.get_attachments_from_links(
+            peer_id=event.object.object.message.peer_id,
+            links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+комиксы/', 396, None),
+        )
+        await api.messages.send(
+            peer_id=event.object.object.message.peer_id,
+            message=(random.choice(texts)),
+            attachment=big_attachment,
+            random_id=0
+        )
+@router.registrar.with_decorator(TextContainsFilter("тырим"))
+async def handler(event: BaseEvent):
+    while True:
+        try:
+            texts = ['Воу воу воу', 'Годный парс', 'Это вообще законно?', 'Ну хоть не жопки']
+            mess = event.object.object.message.text
+            reactormess = mess.split()
+            async with create_api_session_aiohttp(confpo.token) as api:
+                uploader = PhotoUploader(api)
+                big_attachment = await uploader.get_attachments_from_links(
+                    peer_id=event.object.object.message.peer_id,
+                    links=reactorsoup(str(reactormess[2]), str(reactormess[3]), None, int(reactormess[4])),
+                )
+                await api.messages.send(
+                    peer_id=event.object.object.message.peer_id,
+                    message=(random.choice(texts)),
+                    attachment=big_attachment,
+                    random_id=0
+                )
+                break
+        except:
+            await event.api_ctx.messages.send(
+                peer_id=event.object.object.message.peer_id,
+                message="ОШИБКАААА, пиши правильно \n http://ссылка тут твоя ссылка на реактор/ eropony/ 260",
+                random_id=0,
+            )
+            break
+
+
+@router.registrar.with_decorator(TextContainsFilter("с уважением"))
+async def handler(event: BaseEvent):
+    print('с уважением начало')
+    texts = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
+             'Не спускайте глаз со всех']
+    async with create_api_session_aiohttp(confpo.token) as api:
+        uploader = PhotoUploader(api)
+        st = 1
+        result = None
+        while result is None:
+            try:
+                st += 1
+                print('с уважением ' + str(st))
+                if st == 5:
+                    result = 1
+                big_attachment = await uploader.get_attachments_from_links(
+                    peer_id=event.object.object.message.peer_id,
+                    links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 260, None, amt=5))
+                result = 1
+            except:
+                print('Ошибка загрузки')
+                pass
+
+        await api.messages.send(
+            peer_id=event.object.object.message.peer_id,
+            message=(random.choice(texts)),
+            attachment=big_attachment,
+            random_id=0
+        )
+
+
+
+# @router.registrar.with_decorator(TextContainsFilter("культуры"))
+# async def kb_handler(event: BaseEvent):
+#     texts = ['Это тебе на вечер', 'Культуры захотелось?', 'Что читаешь?', 'Ты друзь',
+#              'чмоки', '&#128526;', '&#128686;', '&#127793;', '&#127770;', '&#10084;']
+#     kb = Keyboard(one_time=True)
+#     kb.add_text_button(text="комикс", payload={"hello": "world"})
+#     await event.api_ctx.messages.send(
+#         peer_id=event.object.object.message.peer_id,
+#         message=(random.choice(texts)),
+#         keyboard=kb.get_keyboard(),
+#         random_id=0,
+#     )
+
+
+@router.registrar.with_decorator(TextContainsFilter("погода"))
+async def handler(event: BaseEvent):
+    print('Погодка')
+    await event.api_ctx.messages.send(
+        peer_id=event.object.object.message.peer_id,
+        message=weather.Weather.get_weather_today(),
+        random_id=0,
+    )
+
+@router.registrar.with_decorator()
+async def handler(event: BaseEvent):
+    print('Написали')
+    texts = ["Держи пони", "Лови", "Вот, наслаждайся", "Моё почтение(нет)"]
+    async with create_api_session_aiohttp(confpo.token) as api:
+        uploader = PhotoUploader(api)
+
+        big_attachment = await uploader.get_attachments_from_links(
+            peer_id=event.object.object.message.peer_id,
+            links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+art/', 4500, None),
+        )
+        await api.messages.send(
+            peer_id=event.object.object.message.peer_id,
+            message=(random.choice(texts)),
+            attachment=big_attachment,
+            random_id=0
+        )
+
+
+
+async def main():
+    client = AIOHTTPClient()
+    token = BotSyncSingleToken(bot_token)
+    api_session = API(token, client)
+    api = api_session.get_context()
+    lp_data = BotLongpollData(gid)
+    longpoll = BotLongpoll(api, lp_data)
+    token_storage = TokenStorage[GroupId]()
+    dp = Dispatcher(api_session, token_storage)
+    lp_extension = BotLongpollExtension(dp, longpoll)
+
+    dp.add_router(router)
+    await dp.cache_potential_tokens()
+    await lp_extension.start()
+
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())
+    loop.run_forever()
