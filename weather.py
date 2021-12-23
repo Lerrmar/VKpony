@@ -23,3 +23,12 @@ class Weather:
 
         return result
 #print(Weather.get_weather_today())
+
+class Citata:
+    @staticmethod
+    def get_citata() -> list:
+        http = "https://citaty.info/random/"
+        b = BeautifulSoup(requests.get(http).text, "html.parser")
+
+        temp = b.find('div', {'class': 'field-item even last'})
+        return temp.text
