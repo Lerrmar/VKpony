@@ -5,6 +5,7 @@ import random
 import requests
 from bs4 import BeautifulSoup
 
+
 from vkwave.bots import (
     BaseEvent,
     TokenStorage,
@@ -54,7 +55,7 @@ def reactorsoup(sitepars, tag, pages, pagesmess, amt=1, ):
                     obj2 = scan.find("a")["href"]
                 except:
                     pass
-                obj23.append(obj2)
+                obj23.append('https:' + str(obj2))
 
             image_url = random.sample(set(obj23), amt)
             result = 1
@@ -70,10 +71,10 @@ async def kb_handler(event: BaseEvent):
     print('help')
     hp = "Ваша молитва услышана, передаю значение команд:\n" \
          " - Без команды бот кидает просто рандомную поню из классического набора, как сейчас.\n" \
-         " - Команда <Вано> кидает случайную пони с тэгом <eropony>. \n" \
+         " - Команда <няш> кидает случайную пони с тэгом <eropony>. \n" \
          " - Команда <комикс> кидает случайный комикс, тэг <mlp+комиксы>. \n" \
          " - Команда написанная <с уважением> кидает 5 случайных пони с тэгом <eropony> \n" \
-         " - Команда <культуры> кидает случайный арт.\n" \
+         " - Команда <арт> кидает случайный арт.\n" \
          " - Команда <погода> показывает прогноз погоды в Питере на сегодня(в разработке, пишите если нужна).\n" \
          " - Команда <тырим> отправляет вас в мир увлекательного заимствования, напишите тырим_http://ссылку на сайт реактора/tag/_тег с конца ссылки/_номер страницы.\n" \
          " Всего вам хорошего и держитесь там"
@@ -86,19 +87,41 @@ async def kb_handler(event: BaseEvent):
         random_id=0,
     )
 
-
-@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("Вано"))
+@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("Гондор зовет на помощь"))
 async def handler(event: BaseEvent):
     print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
-    print('Вано')
+    print('Гондор зовет на помощь')
+    message_text = event.object.object.message.text  # текст сообщения
+    texts = weather.rohan(message_text)  # вызываем функцию из файла
+    image_rohan = ["https://sun9-43.userapi.com/impg/7MeCyb5AUMr5hofVJtQaVs9u8xVlzXJWq4TF0Q/-slpwzDaP6E.jpg?size=1280x594&quality=96&sign=4c432dae34c6dc2de9af496d92f91dd0&type=album"]
+
+    async with create_api_session_aiohttp(confpo.token) as api:  # какая то магия
+        uploader = PhotoUploader(api)  # что то загружает фото
+        big_attachment = await uploader.get_attachments_from_links(
+            peer_id=event.object.object.message.peer_id,
+            #links=reactorsoup('http://arda.reactor.cc/', 'new/', 736, None),
+            links=image_rohan,
+        )
+        await api.messages.send(
+            peer_id=event.object.object.message.peer_id,
+            message=(random.choice(texts)),  # рандомно выбирает текст
+            attachment=big_attachment,
+            random_id=0
+        )
+
+@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("няш"))
+async def handler(event: BaseEvent):
+    print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
+    print('няш')
     texts = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
-             'Не спускайте глаз с Вано']
+             'Не спускайте глаз с няш']
+
     async with create_api_session_aiohttp(confpo.token) as api:
         uploader = PhotoUploader(api)
 
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
-            links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 297, None),
+            links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 340, None),
         )
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,
@@ -108,7 +131,7 @@ async def handler(event: BaseEvent):
         )
 
 
-@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("культуры"))
+@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("арт"))
 async def handler(event: BaseEvent):
     print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
     print('Культуры')
@@ -119,7 +142,7 @@ async def handler(event: BaseEvent):
 
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
-            links=reactorsoup('http://reactor.cc/tag/', 'art/', 7580, None),
+            links=reactorsoup('http://reactor.cc/tag/', 'art/', 10787, None),
         )
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,
@@ -138,7 +161,7 @@ async def handler(event: BaseEvent):
         uploader = PhotoUploader(api)
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
-            links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+комиксы/', 400, None),
+            links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+комиксы/', 412, None),
         )
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,
@@ -195,7 +218,7 @@ async def handler(event: BaseEvent):
                     result = 1
                 big_attachment = await uploader.get_attachments_from_links(
                     peer_id=event.object.object.message.peer_id,
-                    links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 297, None, amt=5))
+                    links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 340, None, amt=5))
                 result = 1
             except:
                 print('Ошибка загрузки')
@@ -243,7 +266,7 @@ async def handler(event: BotEvent):
 
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
-            links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+art/', 4845, None),
+            links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+art/', 5184, None),
         )
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,

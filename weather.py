@@ -1,4 +1,6 @@
+import re
 import requests
+
 from bs4 import BeautifulSoup
 
 
@@ -32,3 +34,25 @@ class Citata:
 
         temp = b.find('div', {'class': 'field-item even last'})
         return temp.text
+
+
+def rohan(request):
+
+    if re.search(r'\bГондор зовет на помощь\b', request):
+        citations = ['И Рохан явится',
+                     'И Рохан явится',
+                     'И Рохан явится']
+
+    elif re.search(r'\bжопа\b', request):
+        citations = ['Рохан не говорит "жопа" пёс!', 'Пertertшитель', 'Эрэктус тебе в мармелад', 'Зубы на стол',
+                 'Оглянись!']
+
+    elif re.search(r'\b1111\b', request):
+        citations = ['Рох22ит "жопа" пёс!', 'Пer222ель', 'Эрэкту222мармелад', 'Зу222 стол',
+                     'Огw33сь!']
+    else:
+        citations = ["Рохан недоволен тобою."]
+
+
+
+    return citations
