@@ -1,36 +1,29 @@
-# Версия API: 5:124
+# Версия API: 5:124 версия бота 1.1
 import asyncio
+import string
 import time
 import random
 import requests
+import g4f
 from bs4 import BeautifulSoup
 
-
 from vkwave.bots import (
-    BaseEvent,
-    TokenStorage,
-    Dispatcher,
-    BotLongpollExtension,
-    DefaultRouter,
-    GroupId,
-    EventTypeFilter,
-    PayloadFilter,
-    CommandsFilter,
-    Keyboard, PhotoUploader, create_api_session_aiohttp, TextContainsFilter, BotEvent,
+    BaseEvent, TokenStorage, Dispatcher, BotLongpollExtension,
+    DefaultRouter, GroupId, EventTypeFilter, PhotoUploader,
+    create_api_session_aiohttp, TextContainsFilter, BotEvent,
 )
+
 from vkwave.client import AIOHTTPClient
-from vkwave.api import BotSyncSingleToken, Token, API, APIOptionsRequestContext
+from vkwave.api import BotSyncSingleToken, Token, API
 from vkwave.longpoll.bot import BotLongpoll, BotLongpollData
-from vkwave.types.bot_events import BotEventType
+
 
 import confpo
 import weather
 
-# logging.basicConfig(level=logging.DEBUG)
 bot_token = Token(confpo.token)
 gid = confpo.idsession
 router = DefaultRouter()
-
 
 def reactorsoup(sitepars, tag, pages, pagesmess, amt=1, ):
     st = 1
@@ -49,80 +42,67 @@ def reactorsoup(sitepars, tag, pages, pagesmess, amt=1, ):
             response = requests.get(str(main_page))
             soup = BeautifulSoup(response.text, "html.parser")
             scans = soup.find_all("div", {"class": "image"})
-            obj23 = []
+            list_links = []
             for scan in scans:  # пробегаем по коду страницы и вычленяем ссылки
                 try:
-                    obj2 = scan.find("a")["href"]
+                    found_images = scan.find("a")["href"]
                 except:
                     pass
-                obj23.append('https:' + str(obj2))
+                list_links.append('https:' + str(found_images))
 
-            image_url = random.sample(set(obj23), amt)
+            image_url = random.sample(set(list_links), amt)
             result = 1
         except:
             print('Ошибка парсинга')
             pass
+
     return image_url
 
 
 @router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("help"))
 async def kb_handler(event: BaseEvent):
     print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
+    print(event.object.object.message.text)
     print('help')
+
     hp = "Ваша молитва услышана, передаю значение команд:\n" \
          " - Без команды бот кидает просто рандомную поню из классического набора, как сейчас.\n" \
          " - Команда <няш> кидает случайную пони с тэгом <eropony>. \n" \
          " - Команда <комикс> кидает случайный комикс, тэг <mlp+комиксы>. \n" \
          " - Команда написанная <с уважением> кидает 5 случайных пони с тэгом <eropony> \n" \
          " - Команда <арт> кидает случайный арт.\n" \
-         " - Команда <погода> показывает прогноз погоды в Питере на сегодня(в разработке, пишите если нужна).\n" \
-         " - Команда <тырим> отправляет вас в мир увлекательного заимствования, напишите тырим_http://ссылку на сайт реактора/tag/_тег с конца ссылки/_номер страницы.\n" \
          " Всего вам хорошего и держитесь там"
-    # kb = Keyboard(one_time=True)
-    # kb.add_text_button(text="Вано", payload={"hello": "world"})
+
     await event.api_ctx.messages.send(
         peer_id=event.object.object.message.peer_id,
         message=hp,
-        # keyboard=kb.get_keyboard(),
         random_id=0,
     )
 
-@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("Гондор зовет на помощь"))
-async def handler(event: BaseEvent):
-    print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
-    print('Гондор зовет на помощь')
-    message_text = event.object.object.message.text  # текст сообщения
-    texts = weather.rohan(message_text)  # вызываем функцию из файла
-    image_rohan = ["https://sun9-43.userapi.com/impg/7MeCyb5AUMr5hofVJtQaVs9u8xVlzXJWq4TF0Q/-slpwzDaP6E.jpg?size=1280x594&quality=96&sign=4c432dae34c6dc2de9af496d92f91dd0&type=album"]
 
-    async with create_api_session_aiohttp(confpo.token) as api:  # какая то магия
-        uploader = PhotoUploader(api)  # что то загружает фото
-        big_attachment = await uploader.get_attachments_from_links(
-            peer_id=event.object.object.message.peer_id,
-            #links=reactorsoup('http://arda.reactor.cc/', 'new/', 736, None),
-            links=image_rohan,
-        )
-        await api.messages.send(
-            peer_id=event.object.object.message.peer_id,
-            message=(random.choice(texts)),  # рандомно выбирает текст
-            attachment=big_attachment,
-            random_id=0
-        )
+def get_gpt(promt) -> list:
+    response = g4f.ChatCompletion.create(
+        model= g4f.models.gpt_35_turbo,
+        messages=[{"role": "user", "content": promt}],
+    )
+    return response
+
 
 @router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("няш"))
 async def handler(event: BaseEvent):
     print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
+    print(event.object.object.message.text)
     print('няш')
     texts = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
              'Не спускайте глаз с няш']
 
     async with create_api_session_aiohttp(confpo.token) as api:
         uploader = PhotoUploader(api)
-
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
             links=reactorsoup('http://mlp.reactor.cc/tag/', 'eropony/', 340, None),
         )
+
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,
             message=(random.choice(texts)),
@@ -134,16 +114,17 @@ async def handler(event: BaseEvent):
 @router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("арт"))
 async def handler(event: BaseEvent):
     print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
+    print(event.object.object.message.text)
     print('Культуры')
     texts = ['Это тебе на вечер', 'Культуры захотелось?', 'Что читаешь?', 'Ты друзь',
              'чмоки', '&#128526;', '&#128686;', '&#127793;', '&#127770;', '&#10084;']
     async with create_api_session_aiohttp(confpo.token) as api:
         uploader = PhotoUploader(api)
-
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
             links=reactorsoup('http://reactor.cc/tag/', 'art/', 10787, None),
         )
+
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,
             message=(random.choice(texts)),
@@ -155,8 +136,10 @@ async def handler(event: BaseEvent):
 @router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("комикс"))
 async def handler(event: BaseEvent):
     print('Сообщение' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
+    print(event.object.object.message.text)
     print('Комикс')
     texts = ['Почитай', 'Годный комикс', 'Читать понравилось?', 'Ну хоть не эротика']
+
     async with create_api_session_aiohttp(confpo.token) as api:
         uploader = PhotoUploader(api)
         big_attachment = await uploader.get_attachments_from_links(
@@ -169,47 +152,20 @@ async def handler(event: BaseEvent):
             attachment=big_attachment,
             random_id=0
         )
-@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("тырим"))
-async def handler(event: BaseEvent):
-    print('Сообщение ' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
-    print('Тырим')
-    while True:
-        try:
-            texts = ['Воу воу воу', 'Годный парс', 'Это вообще законно?', 'Ну хоть не жопки']
-            mess = event.object.object.message.text
-            reactormess = mess.split()
-            async with create_api_session_aiohttp(confpo.token) as api:
-                uploader = PhotoUploader(api)
-                big_attachment = await uploader.get_attachments_from_links(
-                    peer_id=event.object.object.message.peer_id,
-                    links=reactorsoup(str(reactormess[2]), str(reactormess[3]), None, int(reactormess[4])),
-                )
-                await api.messages.send(
-                    peer_id=event.object.object.message.peer_id,
-                    message=(random.choice(texts)),
-                    attachment=big_attachment,
-                    random_id=0
-                )
-                break
-        except:
-            await event.api_ctx.messages.send(
-                peer_id=event.object.object.message.peer_id,
-                message="ОШИБКАААА, пиши правильно \n http://ссылка тут твоя ссылка на реактор/ eropony/ 260",
-                random_id=0,
-            )
-            break
-
 
 @router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("с уважением"))
 async def handler(event: BaseEvent):
     print('Сообщение ' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
+    print(event.object.object.message.text)
     print('С уважением начало')
     texts = ['Не шали', 'Приготовь огнетушитель', '18+', 'Руки на стол',
              'Не спускайте глаз со всех']
+
     async with create_api_session_aiohttp(confpo.token) as api:
         uploader = PhotoUploader(api)
         st = 1
         result = None
+
         while result is None:
             try:
                 st += 1
@@ -231,43 +187,18 @@ async def handler(event: BaseEvent):
             random_id=0
         )
 
-
-
-# @router.registrar.with_decorator(TextContainsFilter("культуры"))
-# async def kb_handler(event: BaseEvent):
-#     texts = ['Это тебе на вечер', 'Культуры захотелось?', 'Что читаешь?', 'Ты друзь',
-#              'чмоки', '&#128526;', '&#128686;', '&#127793;', '&#127770;', '&#10084;']
-#     kb = Keyboard(one_time=True)
-#     kb.add_text_button(text="комикс", payload={"hello": "world"})
-#     await event.api_ctx.messages.send(
-#         peer_id=event.object.object.message.peer_id,
-#         message=(random.choice(texts)),
-#         keyboard=kb.get_keyboard(),
-#         random_id=0,
-#     )
-
-
-@router.registrar.with_decorator(EventTypeFilter("message_new"), TextContainsFilter("погода"))
-async def handler(event: BaseEvent):
-    print('Сообщение ' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
-    print('Погодка')
-    await event.api_ctx.messages.send(
-        peer_id=event.object.object.message.peer_id,
-        message=weather.Weather.get_weather_today(),
-        random_id=0,
-    )
-
 @router.registrar.with_decorator(EventTypeFilter("message_new"))
 async def handler(event: BotEvent):
     print('Сообщение ' + time.asctime(time.localtime(time.time())) + '\n' + '-' * 50)
-    texts = ["Держи пони", "Лови", "Вот, наслаждайся", "Моё почтение(нет)"]
+    print(event.object.object.message.text)
+
     async with create_api_session_aiohttp(confpo.token) as api:
         uploader = PhotoUploader(api)
-
         big_attachment = await uploader.get_attachments_from_links(
             peer_id=event.object.object.message.peer_id,
             links=reactorsoup('http://mlp.reactor.cc/tag/', 'mlp+art/', 5184, None),
         )
+
         await api.messages.send(
             peer_id=event.object.object.message.peer_id,
             message=weather.Citata.get_citata(),
@@ -297,3 +228,4 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(main())
     loop.run_forever()
+
